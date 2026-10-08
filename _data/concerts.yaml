@@ -1,0 +1,41 @@
+- id: demo-1
+  artist: "John Doe"
+  tour: "John Tour"
+  date: "2026-01-01"
+  city: "Los Angeles, CA"
+  venue: "SoFi Stadium"
+  scores:
+    sound_and_vocals: 9
+    setlist: 10
+    crowd_and_vibe: 9
+    production: 10
+    personal_impact: 10
+  highlight: "The encore roulette wheel picking our favorite B-side."
+  review: >
+    Unmatched production value and stage presence. The live band arrangements made
+    even older singles sound fresh and stadium-ready.
+  media:
+    - type: "drive"
+      label: "Soundcheck & Fancams"
+      url: "https://drive.google.com"
+
+- id: demo-2
+  artist: "Jane Doe"
+  tour: "Jane Tour"
+  date: "2025-06-10"
+  city: "Denver, CO"
+  venue: "Empower Field at Mile High"
+  scores:
+    sound_and_vocals: 8
+    setlist: 8
+    crowd_and_vibe: 10
+    production: 10
+    personal_impact: 8
+  highlight: "The entire stadium lighting up with synchronized LED wristbands"
+  review: >
+    The visual spectacle and crowd unison carried the entire night. 
+    Acoustics in the upper bowl were slightly boomy, but the energy compensated for it.
+  media:
+    - type: "drive"
+      label: "Full Concert Clips"
+      url: "https://drive.google.com"

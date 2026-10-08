@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ site.title }}</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card-bg: #181a20;
+      --border: #282c37;
+      --text: #e6e8ec;
+      --muted: #8b92a5;
+      --accent: #6366f1;
+      --tier-s: #f43f5e;
+      --tier-a: #fb923c;
+      --tier-b: #facc15;
+      --tier-c: #4ade80;
+      --tier-d: #60a5fa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+    header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; }
+    h1 { font-size: 1.75rem; font-weight: 700; }
+    .controls { display: flex; gap: 0.5rem; }
+    .btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn.active { background: var(--accent); border-color: var(--accent); }
+
+    /* Card List View */
+    .card-list { display: flex; flex-direction: column; gap: 1rem; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      position: relative;
+    }
+
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      background: var(--border);
+      color: var(--text);
+    }
+    .rank-1 { background: #ffd700; color: #111; }
+    .rank-2 { background: #c0c0c0; color: #111; }
+    .rank-3 { background: #cd7f32; color: #fff; }
+
+    .score-badge {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .title-group h2 { font-size: 1.25rem; font-weight: 600; margin-top: 0.35rem; }
+    .meta { font-size: 0.85rem; color: var(--muted); }
+
+    .score-breakdown {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.5rem;
+      margin: 1rem 0;
+      padding: 0.75rem;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+    .score-item { display: flex; justify-content: space-between; }
+    .score-val { font-weight: 600; color: #fff; }
+
+    .highlight {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      padding-left: 0.75rem;
+      border-left: 2px solid var(--accent);
+      color: #cbd5e1;
+    }
+    .review { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .links a {
+      display: inline-block;
+      font-size: 0.8rem;
+      text-decoration: none;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+    }
+
+    /* Tier Board View */
+    .tier-section { margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .tier-header { padding: 0.5rem 1rem; font-weight: 800; font-size: 1.1rem; color: #111; }
+    .tier-s { background: var(--tier-s); }
+    .tier-a { background: var(--tier-a); }
+    .tier-b { background: var(--tier-b); }
+    .tier-c { background: var(--tier-c); }
+    .tier-d { background: var(--tier-d); }
+    .tier-content { padding: 1rem; display: flex; flex-wrap: wrap; gap: 0.75rem; background: var(--card-bg); }
+    .tier-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Concert Tier List & Ranking</h1>
+        <p class="meta">Auto-calculated rankings from structured YAML</p>
+      </div>
+      <div class="controls">
+        <button id="btn-leaderboard" class="btn active" onclick="switchView('leaderboard')">Leaderboard</button>
+        <button id="btn-tiers" class="btn" onclick="switchView('tiers')">Tier List</button>
+      </div>
+    </header>
+
+    <main id="content"></main>
+  </div>
+
+  <script>
+    // Jekyll injects your _data/concerts.yml file directly as an object array:
+    const rawData = {{ site.data.concerts | jsonify }};
+
+    // Weights: adjust percentages here (must add up to 1.0)
+    const WEIGHTS = {
+      sound_and_vocals: 0.20,
+      setlist: 0.25,
+      crowd_and_vibe: 0.20,
+      production: 0.20,
+      personal_impact: 0.15
+    };
+
+    function calculateScore(scores) {
+      if (!scores) return 0;
+      let total = 0;
+      for (const [key, weight] of Object.entries(WEIGHTS)) {
+        total += (scores[key] || 0) * weight;
+      }
+      return parseFloat(total.toFixed(2));
+    }
+
+    function getTier(score) {
+      if (score >= 9.3) return 'S';
+      if (score >= 8.5) return 'A';
+      if (score >= 7.5) return 'B';
+      if (score >= 6.5) return 'C';
+      return 'D';
+    }
+
+    // Process and sort all concerts descending by overall score
+    const processedConcerts = rawData.map(c => {
+      const overall = calculateScore(c.scores);
+      return {
+        ...c,
+        overallScore: overall,
+        tier: getTier(overall)
+      };
+    }).sort((a, b) => b.overallScore - a.overallScore);
+
+    let activeView = 'leaderboard';
+
+    function renderLeaderboard() {
+      const container = document.createElement('div');
+      container.className = 'card-list';
+
+      processedConcerts.forEach((c, index) => {
+        const rank = index + 1;
+        const rankClass = rank <= 3 ? `rank-${rank}` : '';
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-header">
+            <div>
+              <span class="rank-badge ${rankClass}">#${rank}</span>
+              <span class="rank-badge" style="margin-left: 0.25rem;">Tier ${c.tier}</span>
+              <div class="title-group">
+                <h2>${c.artist}</h2>
+                <div class="meta">${c.tour ? c.tour + ' &bull; ' : ''}${c.venue || ''} &bull; ${c.city} &bull; ${c.date}</div>
+              </div>
+            </div>
+            <div class="score-badge">${c.overallScore}</div>
+          </div>
+
+          <div class="score-breakdown">
+            <div class="score-item"><span>Sound/Vocals</span><span class="score-val">${c.scores?.sound_and_vocals ?? '-'}</span></div>
+            <div class="score-item"><span>Setlist</span><span class="score-val">${c.scores?.setlist ?? '-'}</span></div>
+            <div class="score-item"><span>Vibe/Crowd</span><span class="score-val">${c.scores?.crowd_and_vibe ?? '-'}</span></div>
+            <div class="score-item"><span>Production</span><span class="score-val">${c.scores?.production ?? '-'}</span></div>
+            <div class="score-item"><span>Impact</span><span class="score-val">${c.scores?.personal_impact ?? '-'}</span></div>
+          </div>
+
+          ${c.highlight ? `<div class="highlight"><strong>Highlight:</strong> ${c.highlight}</div>` : ''}
+          ${c.review ? `<p class="review">${c.review}</p>` : ''}
+          ${c.media && c.media.length ? `
+            <div class="links">
+              ${c.media.map(m => `<a href="${m.url}" target="_blank" rel="noopener">${m.label || 'Media'} &nearr;</a>`).join(' ')}
+            </div>
+          ` : ''}
+        `;
+        container.appendChild(card);
+      });
+
+      return container;
+    }
+
+    function renderTiers() {
+      const container = document.createElement('div');
+      const tiers = ['S', 'A', 'B', 'C', 'D'];
+
+      tiers.forEach(tier => {
+        const list = processedConcerts.filter(c => c.tier === tier);
+        const section = document.createElement('div');
+        section.className = 'tier-section';
+        section.innerHTML = `
+          <div class="tier-header tier-${tier.toLowerCase()}">${tier} TIER (${list.length})</div>
+          <div class="tier-content">
+            ${list.length > 0 ? list.map(c => `
+              <div class="tier-card">
+                <strong>${c.artist}</strong> (${c.overallScore})<br/>
+                <span class="meta">${c.city} &bull; ${c.date.split('-')[0]}</span>
+              </div>
+            `).join('') : '<span class="meta">No shows in this tier</span>'}
+          </div>
+        `;
+        container.appendChild(section);
+      });
+
+      return container;
+    }
+
+    function switchView(view) {
+      activeView = view;
+      document.getElementById('btn-leaderboard').className = `btn ${view === 'leaderboard' ? 'active' : ''}`;
+      document.getElementById('btn-tiers').className = `btn ${view === 'tiers' ? 'active' : ''}`;
+      
+      const contentEl = document.getElementById('content');
+      contentEl.innerHTML = '';
+      contentEl.appendChild(view === 'leaderboard' ? renderLeaderboard() : renderTiers());
+    }
+
+    // Initial render
+    switchView('leaderboard');
+  </script>
+</body>
+</html>
